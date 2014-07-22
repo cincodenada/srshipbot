@@ -1,0 +1,13 @@
+---
+username: Bot
+password: hunter2
+subreddit: Test
+useragent: Something descriptive, preferably with your username
+
+header: "I have detected some ship designs in your comment. Here are the viewing links:\n\n"
+
+parentstring: http://jundroo.com/ViewShip.html?id=
+replacestring: http://sr.5of0.com/ViewShip.html?id=
+
+maxposts: 100
+wait: 10

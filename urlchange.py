@@ -25,40 +25,60 @@ sql.commit()
 r = praw.Reddit(config['useragent'])
 r.login(config['username'], config['password']) 
 
+def checkItem(id, text):
+    result = []
+    if config['parentstring'].lower() in text.lower():
+        cur.execute('SELECT * FROM oldposts WHERE ID=?', [id])
+        if not cur.fetchone():
+            textsplit = text.split()
+            print(id)
+            for sent in textsplit:
+                if config['parentstring'].lower() in sent.lower():
+                    try:
+                        url = sent.replace(config['parentstring'], config['replacestring'])
+                        if '(' in url:
+                            url = url[url.index('(')+1:]
+                            url = url.replace(')', '')
+                        int(url[PLEN:-1])
+                        result.append(url)
+                    except ValueError:
+                        print('Not a valid url')
+                    except AttributeError:
+                        print('Comment author does not exist')
+                    except Exception:
+                        print('Error.')
+
+            cur.execute('INSERT INTO oldposts VALUES(?)', [id])
+
+            if len(result) > 0:
+                final = config['header'] + '\n\n'.join(result)
+                return final;
+
+    return None
+
 def scanSub():
-    print('Searching '+ config['subreddit'] + '.')
+    print('Searching '+ config['subreddit'] + ' comments...')
     subreddit = r.get_subreddit(config['subreddit'])
     posts = subreddit.get_comments(limit=config['maxposts'])
     for post in posts:
-        result = []
-        pid = post.id
-        pbody = post.body
-        if config['parentstring'].lower() in pbody.lower():
-            cur.execute('SELECT * FROM oldposts WHERE ID=?', [pid])
-            if not cur.fetchone():
-                pbodysplit = pbody.split()
-                print(pid)
-                for sent in pbodysplit:
-                    if config['parentstring'].lower() in sent.lower():
-                        try:
-                            url = sent.replace(config['parentstring'], config['replacestring'])
-                            if '(' in url:
-                                url = url[url.index('(')+1:]
-                                url = url.replace(')', '')                            
-                            int(url[PLEN:-1])
-                            pauthor = post.author.name
-                            if pauthor !=config['username']:
-                                result.append(url)
-                        except ValueError:
-                            print('Not a valid url')
-                        except AttributeError:
-                            print('Comment author does not exist')
-                        except Exception:
-                            print('Error.')
-                if len(result) > 0:
-                    final = config['header'] + '\n\n'.join(result)
-                    post.reply(final)
-                cur.execute('INSERT INTO oldposts VALUES(?)', [pid])    
+        if post.author.name != config['username']:
+            reply = checkItem(post.id, post.body)
+            if(reply is not None):
+                post.reply(reply % ('comment'))
+
+    if(config['maxthreads'] > 0):
+        print('Searching '+ config['subreddit'] + ' threads...')
+        threads = subreddit.get_new(limit=config['maxthreads'])
+        for thread in threads:
+            print thread
+            if(thread.is_self):
+                reply = checkItem(thread.name, thread.selftext)
+            else:
+                reply = checkItem(thread.name, thread.url)
+
+            if(reply is not None):
+                thread.add_comment(reply % ('post'))
+
     sql.commit()
 
 while True:

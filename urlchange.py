@@ -3,6 +3,7 @@ import praw # simple interface to the reddit API, also handles rate limiting of 
 import time
 import sqlite3
 import yaml
+import sys
 
 '''USER CONFIGURATION'''
 
@@ -70,7 +71,6 @@ def scanSub():
         print('Searching '+ config['subreddit'] + ' threads...')
         threads = subreddit.get_new(limit=config['maxthreads'])
         for thread in threads:
-            print thread
             if(thread.is_self):
                 reply = checkItem(thread.name, thread.selftext)
             else:
@@ -87,5 +87,6 @@ while True:
     except Exception as e:
         print('An error has occured:', str(e))
     print('Running again in ' + WAITS + ' seconds \n')
+    sys.stdout.flush()
     sql.commit()
     time.sleep(config['wait'])

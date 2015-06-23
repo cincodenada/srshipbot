@@ -35,7 +35,7 @@ def checkItem(id, text):
             for sent in textsplit:
                 if config['parentstring'].lower() in sent.lower():
                     try:
-                        url = sent.replace(config['parentstring'], config['replacestring'])
+                        url = sent.lower().replace(config['parentstring'].lower(), config['replacestring'])
                         if '(' in url:
                             url = url[url.index('(')+1:]
                             url = url.replace(')', '')
@@ -61,7 +61,7 @@ def scanSub():
     subreddit = r.get_subreddit(config['subreddit'])
     posts = subreddit.get_comments(limit=config['maxposts'])
     for post in posts:
-        if post.author.name != config['username']:
+        if post.author.name.lower() != config['username'].lower():
             reply = checkItem(post.id, post.body)
             if(reply is not None):
                 post.reply(reply % ('comment'))

@@ -4,6 +4,7 @@ import time
 import sqlite3
 import yaml
 import sys
+import traceback
 
 '''USER CONFIGURATION'''
 
@@ -23,8 +24,7 @@ print('Loaded Completed table')
 
 sql.commit()
 
-r = praw.Reddit(config['useragent'])
-r.login(config['username'], config['password']) 
+r = praw.Reddit(**config['auth'])
 
 def checkItem(id, text):
     result = []
@@ -59,17 +59,17 @@ def checkItem(id, text):
 
 def scanSub():
     print('Searching '+ config['subreddit'] + ' comments...')
-    subreddit = r.get_subreddit(config['subreddit'])
-    posts = subreddit.get_comments(limit=config['maxposts'])
+    subreddit = r.subreddit(config['subreddit'])
+    posts = subreddit.comments(limit=config['maxposts'])
     for post in posts:
-        if post.author.name.lower() != config['username'].lower():
+        if post.author and post.author.name.lower() != config['auth']['username'].lower():
             reply = checkItem(post.id, post.body)
             if(reply is not None):
                 post.reply(reply % ('comment'))
 
     if(config['maxthreads'] > 0):
         print('Searching '+ config['subreddit'] + ' threads...')
-        threads = subreddit.get_new(limit=config['maxthreads'])
+        threads = subreddit.new(limit=config['maxthreads'])
         for thread in threads:
             if(thread.is_self):
                 reply = checkItem(thread.name, thread.selftext)
@@ -77,7 +77,7 @@ def scanSub():
                 reply = checkItem(thread.name, thread.url)
 
             if(reply is not None):
-                thread.add_comment(reply % ('post'))
+                thread.reply(reply % ('post'))
 
     sql.commit()
 
@@ -86,6 +86,7 @@ while True:
         scanSub()
     except Exception as e:
         print('An error has occured:', str(e))
+        print(traceback.format_exc())
     print('Running again in ' + WAITS + ' seconds \n')
     sys.stdout.flush()
     sql.commit()
